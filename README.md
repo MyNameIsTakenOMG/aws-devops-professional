@@ -1,1 +1,243 @@
 # aws-devops-professional
+## Table of Contents
+ - [SDLC automation](#sdlc-automation)
+ - [Configuration Management and IaC](#configuration-management-and-iac)
+ - [Resilient cloud solutions](#resilient-cloud-solutions)
+ - [Monitoring and Logging](#monitoring-and-logging)
+ - [Incident and Event Response](#incident-and-event-response)
+ - [Security and Compliance](#security-and-compliance)
+ - [Other Services](#other-services)
+
+## SDLC Automation
+ - CI/CD: having our code in a repo and deploy it onto AWS `automatically, the right way, making sure it's tested before being deployed, with possibility to go into different stages(dev, test, staging, prod), with manual approval where needed`.
+   - CI: dev push code to the repo, a test/build server checks the code and gives the feedback to the dev.
+   - CD: ensure software can be released reliably when needed and deployment happens ofter and quickly
+   - tech stack: (code: codeCommit/github/...) -> (build & test: codebuild/jenkins/...) -> (deploy: codeDeploy) -> (provision: EC2/on-prem/lambda/ECS/...)
+     - use `Elastic Beanstalk` to cover `deploy` and `provision` stages
+     - use `codePipeline` to manager the whole process
+ - CodeCommit: version control/ using GIT/ Private repo/ no size limit/ fully managed, HA/ integrate with various CI tools/ Security: ssh key & https(authentication); IAM policies(authorization); encryption(automatically with MKS at rest, in transit, https or ssh); using IAM role and STS (cross-account access) 
+ - CodeCommit - advanced
+ - CodePipeline
+ - CodePipeline - extra
+ - CodePipeline - cloudformation integration
+ - CodePipeline - advanced
+ - CodeBuild
+ - CodeBuild - advanced
+ - CodeDeploy
+ - CodeDeploy - EC2 deep dive
+ - CodeDeploy - ECS deep dive
+ - CodeDeploy - lambda deep dive
+ - CodeDeploy - rollbacks & troubleshooting
+ - CodeArtifact
+ - CodeArtifact - upstream repositories & domains
+ - CodeGuru
+ - CodeGure - extra
+ - EC2 image builder
+ - EC2 image builder - extra
+ - AWS amplify
+ - AWS amplify - extra
+
+## Configuration Management and IaC
+ - Cloudformation - overview
+ - Cloudformation - create/delete stack
+ - cloudformation:
+   - resources
+   - parameters
+   - mappings
+   - outputs & exports
+   - conditions
+   - intrinsic functions
+   - rollbacks
+   - service role
+   - capabilities
+   - deletion policy
+   - stack policy
+   - termination protection
+   - custom resources
+   - dynamic references
+   - user data
+   - cfn-init
+   - cfn-signal & wait condition
+   - cfn-signal failures
+   - nested stacks
+   - depends on
+   - troubleshooting
+   - changesets
+   - cfn-hup
+   - drift
+ - stacksets - warning
+ - cloudformation - stacksets (create / update / delete)
+ - service-catalog
+ - servie-catalog - extra
+ - Elastic Beanstalk
+   - overview
+   - HA environment
+   - deployment modes
+   - extra
+ - serverless application model(SAM)
+   - overview
+   - with CodeDeploy
+ - cloud development kit (CDK)
+ - step functions
+ - AppConfig
+ - system manager (SSM)
+ - AWS tags & SSM resource groups
+ - SSM documents & SSM run command
+ - SSM automations
+   - overview
+   - use case
+ - SSM parameter store
+ - SSM patch manager and maintenance windows
+ - SSM session manager
+   - overview
+   - with VPC endpoints
+ - SSM cleanup
+ - SSM default host management configuration (DHMC)
+ - SSM hybrid environments
+ - SSM with IoT greengrass
+ - SSM compliance
+ - SSM opsCenter
+ - AWS opsWorks
+   - get started (1 & 2)
+   - lifecycle events
+   - cloudwatch events integration
+   - summary
+## Resilient cloud solutions
+ - Lambda
+   - versions and aliases
+   - environment variables
+   - concurrency
+   - file systems mounting
+   - cross-account file systems mounting
+ - API Gateway
+   - overview
+   - stages and deployment
+   - Open API
+   - caching
+   - canary deployment
+   - monitoring, logging and tracing
+ - ECS:
+   - overview
+   - auto scaling
+   - solution architectures
+   - logging
+ - ECR
+ - ECR - extra
+ - EKS
+ - EKS - logging
+ - Amazon Kinesis
+ - kinesis data streams
+   - overview
+   - consumers scaling
+ - kinesis data firehose
+ - kinesis data analytics
+   - overview
+   - using ML
+ - Route53
+   - overview
+   - routing policies:
+     - weighted
+     - latency
+     - failover
+ - RDS read replicas vs multi-AZ
+ - Aurora - extra
+ - elasticCache
+   - overview
+   - redis cluster modes
+ - dynamodb
+   - overview
+   - advanced features
+ - AWS DMS
+   - overview
+   - monitoring
+ - S3 - replication
+ - AWS storage gateway
+   - overview
+   - file gateway cache refresh
+ - Auto scaling groups
+   - scaling policies
+   - lifecycle hooks
+   - event notifications
+   - termination policies
+   - warm pools
+ - application auto scaling
+ - ELB
+   - ALB rules deep dive
+   - extra
+ - NAT gateway
+ - multi-AZ architectures
+ - blue-green architectures
+ - multi-region architectures
+ - disaster recovery
+## Monitoring and Logging
+ - cloudwatch metrics
+ - cloudwatch custom metrics
+ - cloudwatch anomaly detection
+ - amazon lookout for metrics
+ - cloudwatch-logs
+ - cloudwatch-logs - live tail
+ - cloudwath-logs - metric filters
+ - all kinds of logs
+ - cloudwatch agent & cloudwatch logs agent
+ - cloudwatch alarms
+ - cloudwatch synthetics
+ - amazon Athena
+## Incident and Event Response
+ - eventBridge
+   - overview
+   - content filtering
+   - input transformation
+ - S3 - event notifications
+ - S3 - object integrity
+ - AWS health dashboard
+   - overview
+   - events & notifications
+ - EC2 instance status checks
+ - cloudtrail
+   - overview
+   - eventBridge integration
+ - SQS - dead letter queues
+ - SNS - redrive policy
+ - AWS X-Ray
+ - AWS X-Ray with Beanstalk
+ - AWS Distro for openTelemetry
+## Security and Compliance
+ - AWS config
+   - overview
+   - configurations recorder and aggregator
+   - conformance packs
+   - organizational rules
+ - AWS organizations
+   - overview
+   - service control policy (SCP)
+ - AWS control tower
+   - overview
+   - landing zones
+   - account factory & migrating accounts
+   - customizations for AWS control tower (CFCT)
+   - config integation
+   - account factory for terraform
+ - IAM identity center
+   - overview
+   - extra
+ - AWS web application firewall (WAF)
+ - AWS firewall manager
+   - overview
+   - policies
+ - Amazon guardduty
+   - overview
+   - advanced
+   - cloudformation integration
+ - amazon detective
+ - amazon inspector
+   - overview
+   - EC2 setup
+ - EC2 instance migration using AMIs
+ - AWS trusted advisor
+   - overview
+   - architectures
+ - AWS secrets manager
+## Other Services
+ - AWS tag editor
+ - AWS quicksight
+ - AWS glue
