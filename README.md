@@ -16,9 +16,15 @@
      - use `Elastic Beanstalk` to cover `deploy` and `provision` stages
      - use `codePipeline` to manager the whole process
  - CodeCommit: version control/ using GIT/ Private repo/ no size limit/ fully managed, HA/ integrate with various CI tools/ Security: ssh key & https(authentication); IAM policies(authorization); encryption(automatically with MKS at rest, in transit, https or ssh); using IAM role and STS (cross-account access) 
- - CodeCommit - advanced
- - CodePipeline
- - CodePipeline - extra
+ - CodeCommit - advanced:
+   - `monitoring with eventbridge(near real-time)`
+   - `migrate git repo to codeCommit`
+   - cross-region replication: use `eventbridge` to listen to events, then invoke ECS task to replicate to another repo in another region. Use case: lower latency for global devs, backups,...
+   - branch security: using IAM policies to restrict users to push or merge code to a specific branch. `note: resource policy not supported yet`
+   - pull request approval rules: specify a pool of users to approve PR and the number of approvals. specify IAM principal ARN(users, roles,groups). then setup `Approval rule templates` 
+ - CodePipeline: visual workflow to orchestrate your CI/CD. `source`,`build`,`test`,`deploy`,`invoke`. Each stage can have sequential actions and/or parallel actions. Manual approval can be defined at any stage. `Artifact`: each stage will output artifacts and put them into S3 bucket, then will be put into next stage. `Troubleshooting`: use cloudwatch events for failed pipelines or cancelled stages. if a stages failed, it can be seen in the console. if pipeline cannot perform an action, check the IAM role. Also cloudtrail can be used to audit aws api calls.
+ - CodePipeline - extra:
+   - events vs webhooks vs polling: 
  - CodePipeline - cloudformation integration
  - CodePipeline - advanced
  - CodeBuild
