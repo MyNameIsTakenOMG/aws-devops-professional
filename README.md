@@ -24,10 +24,17 @@
    - pull request approval rules: specify a pool of users to approve PR and the number of approvals. specify IAM principal ARN(users, roles,groups). then setup `Approval rule templates` 
  - CodePipeline: visual workflow to orchestrate your CI/CD. `source`,`build`,`test`,`deploy`,`invoke`. Each stage can have sequential actions and/or parallel actions. Manual approval can be defined at any stage. `Artifact`: each stage will output artifacts and put them into S3 bucket, then will be put into next stage. `Troubleshooting`: use cloudwatch events for failed pipelines or cancelled stages. if a stages failed, it can be seen in the console. if pipeline cannot perform an action, check the IAM role. Also cloudtrail can be used to audit aws api calls.
  - CodePipeline - extra:
-   - events vs webhooks vs polling: 
- - CodePipeline - cloudformation integration
- - CodePipeline - advanced
- - CodeBuild
+   - events vs webhooks vs polling
+   - manual approval --> two permissions: `get pipeline`, `put approval result`
+ - CodePipeline - cloudformation integration: `cloudformation deploy action` can be used to deploy aws resources. to deploy resources across accounts or regions, using `stacksets`. Using `CREATE_UPDATE` mode for existing stacks, and `DELETE_ONLY` to delete an existing stack. `workflow`: codebuild-->cfn(create_update)-->codetest-->cfn(delete_only)-->cfn deploy prod infra(create_update)
+   - action modes: create/replace/execute a change set; create/update/delete/replace a stack
+   - template parameter override
+ - CodePipeline - advanced:
+   - best practices: one codepipeline, one codedeploy, parallel deploy to multiple deployment groups; parallel actions used in a stage using `RunOrder` (similar to github action without `steps`); deploy to a `pre-prod` before deploying to prod
+   - with EventBridge: detect and react to any failures in any stage (such as invoke lambda or send SNS)
+   - Invoke actions: lambda & step functions
+   - multi-region: actions in the pipeline can be in different regions; s3 artifact stores must be provisioned in each region(must have read/write); codepipeline will handle copying artifact across regions automatically. (multiple templates may need to be created for multiple regions)
+ - CodeBuild: 
  - CodeBuild - advanced
  - CodeDeploy
  - CodeDeploy - EC2 deep dive
