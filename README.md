@@ -34,21 +34,74 @@
    - with EventBridge: detect and react to any failures in any stage (such as invoke lambda or send SNS)
    - Invoke actions: lambda & step functions
    - multi-region: actions in the pipeline can be in different regions; s3 artifact stores must be provisioned in each region(must have read/write); codepipeline will handle copying artifact across regions automatically. (multiple templates may need to be created for multiple regions)
- - CodeBuild: 
- - CodeBuild - advanced
- - CodeDeploy
- - CodeDeploy - EC2 deep dive
- - CodeDeploy - ECS deep dive
- - CodeDeploy - lambda deep dive
- - CodeDeploy - rollbacks & troubleshooting
- - CodeArtifact
- - CodeArtifact - upstream repositories & domains
- - CodeGuru
- - CodeGure - extra
- - EC2 image builder
- - EC2 image builder - extra
- - AWS amplify
- - AWS amplify - extra
+ - CodeBuild:
+   - source: codeCommit, s3, bitbucket, github
+   - build instructions: `buildspec.yaml` or insert manually in console
+   - output logs: can be stored in s3 & cloudwatch logs
+   - monitor using cloudwatch metrics
+   - eventbridge to detect failed builds and trigger notifications
+   - cloudwatch alarms to notify if you need `thresholds` for failures
+   - build projects can be defined within codepipeline or codebuild
+   - `buildspec.yml`:
+     - located at the root dir
+     - env: `variables`,`parameter-store`,`secrets-manager`
+     - phases: `install`,`pre_build`,`build`(build commands),`post_build`
+     - artifacts: upload to s3(using KMS)
+     - cache: files to cache(usually deps) to s3 for future build
+   - codebuild - local build: codebuild agent for deep troubleshooting beyond logs
+   - codebuild - inside VPC: by default, codebuild runs outside the VPC. you can specify: VPC id, subnet id, security group id, then your build can access resources in your vpc. use case: integration tests, data query, internal load balancers...
+ - CodeBuild - advanced:
+   - env variables: default env variables, custom env variables(static--defined at build time, dynamic--parameter store, secrets manager)
+   - security: codebuild service role
+   - build badges: support codecommit, github, bitbucket. available at branch level
+   - triggers: eventbridge, lambda, github(webhook)
+   - validate pull requests
+   - test reports: various tests with any test framework. in `buildspec.yml`, add a `report group` in the `reports` section
+ - CodeDeploy: deploy new versions to ec2, on-prem, lambda, ecs; automated rollback capability in case of failures or trigger cloudwatch alarm; gradual deployment control; a file `appspec.yml` configuring the deployment
+   - ec2/on-prem: perform in-place or blue/green deployments; must run codedeploy agent on the target instances; define deployment speed: allatonce, halfattime, oneatatime, custom.
+   - in-place deployment: update a certain part at a time
+   - blue/green deployment: create a new identical group but with new version, then update
+   - codedeploy agent: must on ec2 as pre-requisites, using ssm to install and update automatically. must have permissions to access s3 to get deployment bundles.
+   - lambda: help automate traffic shift for lambda aliases; feature integrated with SAM. linear: grow traffic every N min until 100%. canary: try X percent then 100%. AllAtOnce
+   - ecs: only support blue/green deployment. linear, canary, allatonce
+ - CodeDeploy - EC2 deep dive: use ec2 tags or asg to identify instances you want to deploy to. Deployment Hooks: certain scripts run by codedeploy on each ec2 instances. process(using load balancer): block traffic, app stops, install , restart app, validate service, allow traffic.
+   - deployment hooks examples: beforeinstall(such as decrypting files, creating backup), afterinstall(such as configure app), applicationstart, validateservice, beforeallowtraffic(such as perform health checks before registering it to load balancer)
+   - blue/green deployment(must have a load balancer): manually mode: provision blue and green and identify by tags. automatic mode: new asg is provisioned
+   - blue/green instance termination: blueinstanceTerminationOption(whether delete blue after deployment), action terminate(specify wait time), action keep alive(instances keep running but deregisterd from ELB and deployment group)
+   - deployment hooks: some for v1, others for v2
+   - deployment configurations: specify number of instances remain available during the deployment, using pre-defined configs: allatonce, halfatatime, oneatatime or custom
+   - trigger: send events to SNS topic
+ - CodeDeploy - ECS deep dive: automatically handle new ecs task definition to ecs service. only support blue/green, ecs task definition and container image must be ready, the task definition and load balancer info are specified in `appspec.yml`. no codedeploy agent required
+   - deployment to ecs: linear, canary, all at once. can define a second ELB test listener to test the green before traffic is rebalanced.
+   - deployment hooks: all lambda functions. such as `afterAllowTestTraffic`: perform health check and trigger a rollback if it is failed
+ - CodeDeploy - lambda deep dive: a lambda alias pointing to v1, then create a v2 and specify the version info in the `appspec.yml`, then codedeploy updates the version by making lambda alias pointing to v2. no codedeploy agent required.
+   - only blue/green. linear, canary, all at once
+   - hooks
+ - CodeDeploy - rollbacks & troubleshooting:
+   - rollback: redeploy the previous version (automatically when cloudwatch alarm threshold breach, or manually)
+   - disable rollbacks
+   - when rollback, a new deployment will be created(not restore the version)
+   - troubleshooting: exception`InvalidSignatureException`: when the date and time on ec2 instance is not set correctly, they might not match the signature date of your deployment request, which codedeploy rejects.
+   - when deployment or all lifecycle events are skipped(ec2/on-prem) with errors: `too many individual instances failed deployment`, `too few healthy instances for deployment`, `some instances are experiencing problems`. Reasons: no codedeploy agent, service role, codedeploy agent with http proxy, date and time mismatch between codedeploy and agent.
+   - when an asg is performing scale-out operation, a new instance with v1 will be created, but by default, codedeploy will perform a follow-on deployment to update the version.
+   - when failed `allowTraffic` in blue/green with no error, check out ELB health check and correct it.
+ - CodeArtifact: software packages or dependencies. store and retrieve them is called artifact management. work with common package management tools, such as maven, gradle, npm, pip. devs and codebuild can retrieve packages from codeartifact
+   - eventbridge integration
+   - resource policy used for cross-account premissions
+ - CodeArtifact - upstream repositories & domains:
+   - upstream repos: a codeartifact repo can have other codeartifact repos as upstream repos, so that a single repo endpoint is created.
+   - external connection: a codeartifact repo and an external repo. 1-to-1
+   - retention: upstream repo change will affect downstream, but we can delete it and update the package in the downstream. all intermediate repos do not keep the package, only the ones connect to the client and the external repo
+   - domain: deduplicate storage by making a shared storage, thus we have fast copying, easy sharing across repos and teams. apply resource-based policy 
+ - CodeGuru:
+   - ML-powered service for code reviews and app performance recommendations: reviewer: static code analysis(development). profiler: recommendations about app performance during runtime(production)
+ - CodeGure - extra:
+   - codeguru reviewer secrets detector: identify secrets in your code, and suggest remediation with secrets manager.
+   - codeguru profiler -extra: `function decorator @with_lambda_profiler`, or enable it through aws console
+ - EC2 image builder: used to automate the creation of VM or container images(create, maintain, validate, and test ec2 ami). can be on a schedule. free service and can publish ami to multiple regions and multiple accounts.
+ - EC2 image builder - extra: sharing using Resource access manager(RAM) to share images, recipes and components across aws accounts or through aws organization. tracking latest ami (using parameter store to store the latest ami version or id)
+ - AWS amplify: elastic beanstalk for web and mobile apps
+ - AWS amplify - extra: CD: connect to codecommit and have one deployment per branch(dev, prod), connect your app to a custom domain via route53
 
 ## Configuration Management and IaC
  - Cloudformation - overview
