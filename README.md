@@ -104,26 +104,40 @@
  - AWS amplify - extra: CD: connect to codecommit and have one deployment per branch(dev, prod), connect your app to a custom domain via route53
 
 ## Configuration Management and IaC
- - Cloudformation - overview
+ - Cloudformation - overview: declarative way to provision aws infras
+   - benefits:
+     - Infrastructure as code
+     - cost: resources within the stack have an identifier so that we can see how much does the stack costs you; estimate the costs of resources using cloudformation template; saving strategy: in dev, we can delete and recreate resources at certain time period.
+     - productivity: declarative programming
+     - seperation of concern: such as vpc stack, network stack, app stack
+     - no need to re-invent the wheel: checkout existing templates, and docs
+   - workflow: create and upload a template to s3 bucket, then cloudformation will create the stack, to update the stack, we have to upload a new version. when deleting a stack, all artifacts created by cloudformation will be deleted.
+   - deploy cloudformation template: manual way & automated way
  - Cloudformation - create/delete stack
  - cloudformation:
-   - resources
-   - parameters
-   - mappings
-   - outputs & exports
-   - conditions
-   - intrinsic functions
-   - rollbacks
-   - service role
-   - capabilities
-   - deletion policy
-   - stack policy
-   - termination protection
-   - custom resources
-   - dynamic references
-   - user data
-   - cfn-init
-   - cfn-signal & wait condition
+   - resources: mandatory; the resource types identifiers are of the form: `service-provider::service-name::data-type-name`. **note:** for creating a dynamic number of resources, we can use cloudformation Macros and Transform. and using cloudformation resources to provision custom resources.
+   - parameters: provides a way to insert inputs for your template. use cases: reuse the template or some inputs cannot be determined ahead of time. when to use parameters: if the certain config will likely change in the future, then make one. for the types of parameters: such as allowedValues or noEcho. to refer to a parameter, use the intrinsic function `!Ref <parameter name>` or `Fn::Ref`
+     - Pseudo parameters: Aws offers a bunch of pseudo parameters by default which can be used at any time. Such as `AWS::AccountId`,`AWS::Region`,`AWS::StackId`,`AWS::StackName`,`AWS::NotificationARNs`,`AWS::NoValue` 
+   - mappings: fixed variables(all possible values are known in advance), use the intrinsic function `Fn::FindInMap`(!FindInMap [<map-name>, <path>,... ]). use parameter when values are user-specific.
+   - outputs & exports: the best way to perform collaboration cross stacks, using `Export: <name for the outputs> in the Outputs section`, and use the intrinsic function `Fn::ImportValue` to refer to the outputs, `!ImportValue <name of the outputs>`
+   - conditions: used to control of the creation of resources or outputs based on a condition. to create a condition: `<condition name>: !Equals [!Ref envType, prod]`(and, equals, if, not, or...). to use a condition, `add a condition: <condition name> to the resource`.
+   - intrinsic functions: Ref, Base64, GetAtt, FindInMap, ImportValue, Condition functions, ...
+   - rollbacks:  when stack creation fails: by default, rolls back, or to disable rollback and troubleshoot. when update fails: by default, rolls back, able to see in the log of what happened. when rollback fails, fix resources manually then issue `continueUpdateRollback` api call from console/cli 
+   - service role: IAM roles that allows cloudformation to create/update/delete resources on your behalf even if you don't have permission to work with the resources in the stack. the user must have a `iam::PassRole` permissions
+   - capabilities: `CAPABILITY_NAMED_IAM` and `CAPABILITY_IAM`: iam-related resources; `CAPABILITY_AUTO_EXPAND`: needed when template include Macros or nested stacks to perform dynamic transformations. `InsufficientCapabiiltiesException`: if the capabilities haven't been acknowledged when deploying a template.
+   - deletion policy: by default, deletionPolicy=Delete. **note:** s3 bucket won't be deleted if it's not empty.
+     - deletionPolicy - retain: such as dynamodb table
+     - deletionPolicy - Snapshot: create a snapshot before deleting the resource
+   - stack policy: during stack update, all update action are allowed on all resources. a stack policy defines update actions allowed on certain resources during the stack updates (`Allow`/`Deny`)
+   - termination protection:  applied on the entire stack (differ from deletion policy)
+   - custom resources: used to define resources not supported by cloudformation, or on-prem, 3rd-party resources, or having custom scripts to run through create/update/delete through lambda functions(such as empty an s3 bucket before deleting it). `AWS::CloudFormation::CustomResource` or `Custom::MyCustomResourceTypeName`(recommended). backed by lambda or SNS topic.
+     - define a custom resource: `serviceToken`: where cloudformation sends requests to, such as lambda ARN or SNS ARN(must be in the same region). input data parameters.
+   - dynamic references: refer to the external values stored in SSM parameter store and secrets manager. Supports: ssm/ssm-secure/secretsmanager, `{{resolve:<service-name>:<reference-key>:<version>}}`
+     - option1 - `ManageMasterUserPassword: true`: create admin secret implicitly for rds, aurora
+     - option2 - `dynamic reference`: 1. create secret 2. reference secret in rds instance. 3 secretRDSAttachment: link secret to the db instance for rotation.
+   - user data: a script to be executed during the launch of ec2 instance for the first time. **note:** the important thing to pass is the entire script through the function `Fn::Base64`. Good to know, the use data script log is in the `/var/log/cloud-init-output.log`
+   - cfn-init: `cloudformation helper scripts: python scripts that comes on AMIs or installed using yum on non-amazon amis`. `under metadata section, aws::cloudformation::init(config: packages, files, commands, services)`
+   - cfn-signal & wait condition: run `cfn-signal` after `cfn-init`. we need waitCondition: block the template until there's a signal from `cfn-signal`. we attach a `CreationPolicy`, we can define a `Count > 1` if we need more signals.
    - cfn-signal failures
    - nested stacks
    - depends on
