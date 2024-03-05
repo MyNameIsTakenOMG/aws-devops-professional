@@ -137,8 +137,12 @@
      - option2 - `dynamic reference`: 1. create secret 2. reference secret in rds instance. 3 secretRDSAttachment: link secret to the db instance for rotation.
    - user data: a script to be executed during the launch of ec2 instance for the first time. **note:** the important thing to pass is the entire script through the function `Fn::Base64`. Good to know, the use data script log is in the `/var/log/cloud-init-output.log`
    - cfn-init: `cloudformation helper scripts: python scripts that comes on AMIs or installed using yum on non-amazon amis`. `under metadata section, aws::cloudformation::init(config: packages, files, commands, services)`
-   - cfn-signal & wait condition: run `cfn-signal` after `cfn-init`. we need waitCondition: block the template until there's a signal from `cfn-signal`. we attach a `CreationPolicy`, we can define a `Count > 1` if we need more signals.
-   - cfn-signal failures
+   - cfn-signal & wait condition: run `cfn-signal` after `cfn-init`. we need waitCondition: block the template until there's a signal from `cfn-signal`. we attach a `<sample wait condition>.CreationPolicy`, we can define a `Count > 1` if we need more signals.
+   - cfn-signal failures: wait condition didn't receive the required number of signals from resource, such as ec2 instance:
+     - ensure the AMI has helper scripts installed, or download them to the instance.
+     - verify the `cfn-init`, `cfn-signal` run successfully, viewing the logs at `/var/log/cloud-init.log`,`/var/log/cfn-init.log`.
+     - make sure to disable the `rollback on failure`, otherwise, all logs and the instance will be delted
+     - make sure the instance has the access to the internet if it's in a vpc or even a private subnet 
    - nested stacks
    - depends on
    - troubleshooting
