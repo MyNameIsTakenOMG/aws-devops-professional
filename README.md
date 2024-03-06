@@ -143,16 +143,17 @@
      - verify the `cfn-init`, `cfn-signal` run successfully, viewing the logs at `/var/log/cloud-init.log`,`/var/log/cfn-init.log`.
      - make sure to disable the `rollback on failure`, otherwise, all logs and the instance will be delted
      - make sure the instance has the access to the internet if it's in a vpc or even a private subnet 
-   - nested stacks
-   - depends on
-   - troubleshooting
-   - changesets
-   - cfn-hup
-   - drift
- - stacksets - warning
+   - nested stacks: allows you to isolate repeated patterns/common parts. cross stack vs nested stacks
+   - depends on: `DependsOn`, applied automatically when using `!Ref` or `!GetAtt`
+   - troubleshooting: `delete_failed`: such as delete s3 bucket when it's not empty, or use custom resources with lambda functions to automate some actions like emptying s3 bucket; security groups cannot be deleted until all ec2 instances in the group are gone; or check the deletionpolicy(if it's retain-->skep deltion). `update_rollback_failed`: can be caused by resources changed outside of cloudformation, insufficient permissions, asg that doesn't receive enough signals... Manually fix the error, then `continueUpdateRollback`. `stackset--troubleshooting`: insufficient permission in a target account for creating resources specified in your template, or trying to create a global resource but not unique, or admin account has not a trusted relationship with target accounts, or reached the limit or quota in the target account(too many resources) 
+   - changesets: it won't tell if the update will be successful, but provide a preview of what will be changed before applying them. for nested stacks, you will see the changes across all stacks
+   - cfn-hup: can be used to tell your ec2 instance to look for metadata changes every 15 min and apply the metadata config again, it replies on `cfn-hup` config: `/etc/cfn/cfn-hup.conf` and `/etc/cfn/hooks.d/cfn-auto-reloader.conf`
+   - drift: cloudformation drift detect drift on entire stack or individual resource. or perform drift detection on stackset. any changes made outside of cloudformation is considered drifted. (drift detection feature has to be enabled manually)
+ - stacksets - warning: using admin account to create/update/delete stackset, once update or delete stackset, it will applied into all accounts or regions/ or all accounts of AWS organizations.
+   - permission models: `self-managed`: create iam roles for admin and target and build a trust relationship. `service-managed`: utilizing AWS organization(enable all features and trusted access). deploy stack to new account in organization automatically. can delegate stacksets admin to memeber account. again, trusted access in organization must be enable before delegating admin.
  - cloudformation - stacksets (create / update / delete)
- - service-catalog
- - servie-catalog - extra
+ - service-catalog: admin users create a portfolio(collection of products--templates) with iam permissions, then users with proper iam permissions will launch certain template. help ensure consistency, governance, compliance. integration with `self-service portals` such as ServiceNow.
+ - servie-catalog - extra: 
  - Elastic Beanstalk
    - overview
    - HA environment
