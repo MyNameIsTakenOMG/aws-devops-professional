@@ -153,14 +153,20 @@
    - permission models: `self-managed`: create iam roles for admin and target and build a trust relationship. `service-managed`: utilizing AWS organization(enable all features and trusted access). deploy stack to new account in organization automatically. can delegate stacksets admin to memeber account. again, trusted access in organization must be enable before delegating admin.
  - cloudformation - stacksets (create / update / delete)
  - service-catalog: admin users create a portfolio(collection of products--templates) with iam permissions, then users with proper iam permissions will launch certain template. help ensure consistency, governance, compliance. integration with `self-service portals` such as ServiceNow.
- - servie-catalog - extra: 
+ - servie-catalog - extra:
+    - stack set constraints: accounts, regions, permissions
+   - launch constraints: iam role assigned to a template(product), example: end user has only access to the catalog, others permissions required are attached to the launch constaint iam role. iam role mush have permissions: cloudformation(full access), aws services in the template, s3 bucket which contains the cloudformation template(read access)
+   - CD pipeline(syncing with codeCommit): codeCommit(mapping.yml-->product<->template)-->lambda(checkout template)-->update/create service catalog(according product)
  - Elastic Beanstalk
-   - overview
-   - HA environment
-   - deployment modes
-   - extra
+   - overview: application, application version, environment
+   - HA environment: 
+   - deployment modes: All at once / Rolling / Rolling with additional batches( old app is still available while spinning up new instances) -- additional cost / immutable (spins up new instances in a new asg, deploys version to these instances, then swaps all the instance when everything is healthy) -- high cost / (blue/green): create a new env and switch over when ready by utilizing Route53 to redirect a portion of traffic to the new env, then swap urls when done with env test / traffic splitting(canary testing) - send a small % of traffic to new deployment (a temporary asg of new version with a small portion of traffic, then migrate them to the main asg and terminate old version, otherwise automatically rollback)
+   - extra: web server vs worker env(long-term task); notification via eventbridge
  - serverless application model(SAM)
-   - overview
+   - overview: a framework for developing and deploying serverless apps. can use codedeploy to deploy lambda functions and help run lambda, api gateway, dynamodb locally.
+     - recipe:
+     - workflow: app code + sam template --> app code + cfn template --> sam package or zip cfn package to s3 bucket --> deploy to cfn to build stack
+     - cli debug: locally build, test, debug serverless apps. providing a lambda -like execution env locally. sam + aws toolkit --> step through and debug your code (an IDE plugin which allows to test lambda functions using aws sam)
    - with CodeDeploy
  - cloud development kit (CDK)
  - step functions
