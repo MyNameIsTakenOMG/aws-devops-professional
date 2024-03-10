@@ -167,27 +167,40 @@
      - recipe:
      - workflow: app code + sam template --> app code + cfn template --> sam package or zip cfn package to s3 bucket --> deploy to cfn to build stack
      - cli debug: locally build, test, debug serverless apps. providing a lambda -like execution env locally. sam + aws toolkit --> step through and debug your code (an IDE plugin which allows to test lambda functions using aws sam)
-   - with CodeDeploy
- - cloud development kit (CDK)
- - step functions
- - AppConfig
- - system manager (SSM)
- - AWS tags & SSM resource groups
- - SSM documents & SSM run command
+   - with CodeDeploy: natively use codedeploy; traffic shifting feature; pre and post traffic hooks; easy & automated rollback using cloudwatch alarms
+     - sam and codedeploy:
+       - autoPublishAlias: detect changes; create and publish a updated version; point the alias to the new version.
+       - deploymentPreference: canary / linear / allAtOnce
+       - alarms: alarms that trigger a rollback
+       - hooks: pre and post traffic shifting lambda functions to test your deployment
+ - cloud development kit (CDK): using programming languages to define infras `constructs`, which will be transformed into cloudformation template. thus, you can deploy app code and infra code together: great for lambda function and docker containers in ecs/eks.
+   - cdk + sam: use sam cli to test your cdk apps
+ - step functions: model your workflow as state machine(start workflow with SDK call, API gateway, eventBridge).
+   - task states: invoke one aws service, or run an activity
+   - states: choice state / fail or success state / pass state / wait state / map state / parallel state
+ - AppConfig: could have config outside of your app; deploy dynamic config changes to your app independently(no need to restart the app). feature flags, app tuning, allow/block listing... gradually deploy the config changes and rollback if issues occur. validate config changes before deployment using: json schema(syntactic check) or lambda function - run code to perform validation (semantic check)
+ - system manager (SSM): help manage ec2 and on-prem systems at scale; patching automation for enhanced compliance; work for windows and linux; integrate with cloudwatch and aws config; easily detect problems and get insights of your infra.
+   - features: Resource groups, shared resources--documents, change management--automation,maintenance windows, application management--parameter store, node management--inventory,session manager, run command, state manager, patch manager. need a ssm agent installed on the target machine(such as Amazon linux 2 ami), check the ssm agent installation as well as iam role which allows ssm actions
+ - AWS tags & SSM resource groups: add key-value tags to aws resources, which used for resources grouping, automation, cost allocation... better to have too many tags than too few. / create, view or manage logical group of resources thanks to tags, allows to create logical groups of resources such as apps, different layers of app stack, prod vs dev envs. regional service. work with ec2, s3, dynamodb, lambda, etc.
+ - SSM documents(center of SSM) & SSM run command:
+   - documents: define parameters, actions, many existing documents. these documents can be used in other SSM features.
+   - run commands: execute a document, across multi-instances, rate control/error control, integrated with iam and cloudtrail, no need for ssh, output can be shown in the console, s3 bucket or cloudwatch logs, send notifs to SNS abou the command status, can be invoked by eventbridge.
  - SSM automations
-   - overview
+   - overview: simplify common maintenance and deployment tasks of ec2 instances and other aws resources. `automation runbook`: ssm documents of type automation, pre-defined runbooks or custom runbooks. can be triggered by aws console, SDK, cli, eventbridge, maintenance windows, aws config remediation. 
    - use case
- - SSM parameter store
- - SSM patch manager and maintenance windows
+ - SSM parameter store: secure storage for config and secrets/ version tracking/ eventbridge/ cloudformation/ iam/ kms/ serverless,scalable,durable,easy SDK./ store hierarchy./ parameter policies(advanced tier): set TTL to a parameter, assign multiple policies at a time.
+ - SSM patch manager and maintenance windows:
+   - patch manager: automates patching process, os(linux, macos, windows) updates, app updates, security updates... support both ec2 and on-prem, patch on-demand or scheduled using `maintenance windows`, scan instances and create patch compliance report and send to s3 bucket. `patch baseline`: what should or should not be installed. `patch group`: associate a set of instances with a specific patch baseline. instances should be defined with the tag key `Patch Group`. one instance only attached to one group. one group only registered with one baseline. `pre-defined patch baseline`: `AWS-RunPatchBaseline(ssm document)`, `custom patch baseline`
+   - maintenance windows: defines a schedule for when to perform actions on your instances. `schedule`, `duration`, `set of registered instances`, `set of registered tasks`
  - SSM session manager
-   - overview
-   - with VPC endpoints
- - SSM cleanup
- - SSM default host management configuration (DHMC)
- - SSM hybrid environments
- - SSM with IoT greengrass
- - SSM compliance
- - SSM opsCenter
+   - overview: allows to start a secure shell on your ec2 and on-prem. no need for ssh access, bastion hosts or ssh key. support multi-os, logs can be sent to s3 bucket or cloudwatch logs. cloudtrail can be used to intercept `StartSession` events. `IAM permissions`: control access. optionally, restrict commands a user can run.
+   - with VPC endpoints: to connect to ec2 instances in a private subnet without internet access: vpc interface endpoint(for ssm), vpc interface endpoint(for ssm session manager), vpc interface endpoint(optional kms), vpc interface endpoint(optional cloudwatch logs), vpc gateway endpoint(optional - s3 bucket) **note**: for s3 gateway endpoint, update route tables
+ - ~SSM cleanup~
+ - SSM default host management configuration (DHMC): when enabled, ec2 instance will be config as managed instance without the use of `ec2 instance profile`. `Instance identity role`: a type of iam role with no permissions beyond identifying the instance to aws service(such as ssm). ec2 instances must have `IMDSv2 enabled` and `SSM Agent installed`. session manager, patch manager and inventory enabled automatically. must be enabled per region. ssm agent up to date automatically.
+ - SSM hybrid environments: setup ssm to manage on-prem servers, IoT devices, edge devices and virtual machines(for hybrid managed nodes, use the prefix 'mi-'). workflow: hybrid activation --> activation code and Id --> install ssm agent --> registered with activation code and id(could use API gateway, lambda and ssm to automate the process)
+ - SSM with IoT greengrass: IoT Core runs in the cloud and Greengrass runs at the edge (usually). IoT Core is a cloud service but Greengrass is an edge runtime. to manage iot greengrass core devices using ssm, install ssm agent on core devices and add permissions to the `token exchange role`(IAM role for the IoT core device) to communicate with ssm, support all ssm features. use cases: update and maintain os and software across a fleet of greengrass core devices.
+ - SSM compliance: scan managed nodes for patch compliance and config inconsistencies. display current data about `patched in patch manager`, `associations in the state manager`. can sync data  to s3 bucket using `resource data sync` and analyze using athena and quicksight. can collect and aggregate data from multiple accounts and regions. can send compliance data to `security hub`. 
+ - SSM opsCenter: allows to view, investigate, and remediate issues in one place(no need to go to different aws services). security issues(security hub), performance issues(dynamodb throttle), failures(asg failed launch instance),... reduce meantime to resolve issues. support both ec2 instances and on-prem nodes. `OpsItems`: issues or interruptions; event, resource, aws config changes, cloudtrail logs, eventbridge... `provide recommended runbooks to resolve the issue` 
  - AWS opsWorks
    - get started (1 & 2)
    - lifecycle events
