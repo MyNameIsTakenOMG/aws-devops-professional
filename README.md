@@ -202,9 +202,9 @@
  - SSM compliance: scan managed nodes for patch compliance and config inconsistencies. display current data about `patched in patch manager`, `associations in the state manager`. can sync data  to s3 bucket using `resource data sync` and analyze using athena and quicksight. can collect and aggregate data from multiple accounts and regions. can send compliance data to `security hub`. 
  - SSM opsCenter: allows to view, investigate, and remediate issues in one place(no need to go to different aws services). security issues(security hub), performance issues(dynamodb throttle), failures(asg failed launch instance),... reduce meantime to resolve issues. support both ec2 instances and on-prem nodes. `OpsItems`: issues or interruptions; event, resource, aws config changes, cloudtrail logs, eventbridge... `provide recommended runbooks to resolve the issue` 
  - AWS opsWorks
-   - get started (1 & 2)
-   - lifecycle events
-   - cloudwatch events integration
+   - get started (1 & 2): `opswork stacks`(exam required), `opswork for chef automate`, `opswork for puppet enterprise`. `opswork stacks`: a configuration management service that helps you build and operate highly dynamic apps and propagate changes instantly. a stack is a set of layers, instances and related aws resources whose configuration you want to manage together / `time-based instances` & `load-based instances` / Apps / deployments / monitoring / resources / permissions / tags
+   - lifecycle events(most important): each layer has a set of five lifecycle events(`setup`(includes `deploy`),`configure`,`deploy`,`undeploy`,`shutdown`(happen when shutting down an instance but before it's terminated completely)), each of which has an associated set of recipes that are specific to the layer. for `configure` events, it occures on all instances when one instance enters or leaves online state; attach or detach Elastic IP to/from an instance; attach or detach ELB to/from a layer. **note**: `configure` happens on all instances, others are instance-specific
+   - cloudwatch events integration: (opswork has auto-healing feature, to listen to that change happening, create a rule on eventbridge)
    - summary
 ## Resilient cloud solutions
  - Lambda
