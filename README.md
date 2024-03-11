@@ -208,16 +208,26 @@
    - summary
 ## Resilient cloud solutions
  - Lambda
-   - versions and aliases
-   - environment variables
-   - concurrency
-   - file systems mounting
-   - cross-account file systems mounting
+   - versions and aliases: `$LATEST`, versions(code + configuration, has their own ARN) are immutable, and each version can be accessed as well as the `$LATEST`. Aliases are pointers to different versions, which also are mutable and enable `canary` deployment. they have their own ARN and cannot reference other aliases.
+   - environment variables: key-value pair, lambda has its own env variables as well, can be encrypted by kms, lambda service key or CMK
+   - concurrency: `The default concurrency limit across all functions per region in a given account is 1,000`. can set `reserved concurrency` at the function level. each invocation will trigger a `throttle`(synchronous--> throttleError 429; asynchronous--> retry automatically and then go to DLQ), open a support ticket if you need a higher limit.
+     - concurrency and asynchronous invocations: throttleErrors(429) or system errors(500), events will be returned to the queue and try to run the function again up to 6 hrs. the retry intercal increases exponentially from 1 sec to 5 min at maximal.
+     - cold starts & provisioned concurrency: first request served by new instances has higher latency than the rest. Using provisioned concurrency to reserve a certain amount of concurrency for the function so that cold start never happen. Application auto scaling can manage concurrency(schedule or target utilization)
+     - reserved and provisioined concurrency: reserved-->This represents the maximum number of concurrent instances allocated to your function. When a function has reserved concurrency, no other function can use that concurrency. Configuring reserved concurrency for a function incurs no additional charges. provisioned-->This is the number of pre-initialized execution environments allocated to your function. These execution environments are ready to respond immediately to incoming function requests. Configuring provisioned concurrency incurs additional charges to your AWS account.
+   - file systems mounting: lambda function can access EFS file system if they run in a VPC. config lamdba to mount EFS file system to local directory during initialization. must leverage EFS access points. limits: EFS has connection limits and connection burst limit.
+   - cross-account file systems mounting: lambda in VPC A needs several permissions -- VPC peering -- EFS file system in VPC B + access point  needs setup a EFS policy to allow account A.
  - API Gateway
-   - overview
-   - stages and deployment
-   - Open API
-   - caching
+   - overview: fully-managed, support websocket, api versioning, different env, authentication & authorization, api keys and handle request throttling, swagger/open api import to quickly define apis, transform and validate requests and responses, generate sdk and api specification, cache api responses.
+     - integrations: lambda function, HTTP(internal HTTP API on-prem, ALB), aws service
+     - endpoint types: edge-optimized(default, for global clients), regional, private(only be accessed in your VPC).
+     - security: user authentication--> IAM roles(internal apps), cognito(external users), custom authorizer; custom domain name https through ACM(aws certificate manager)--> for edge-optimized, certificate must be in `us-east-1`, for regional, certificate must be in the api gateway region; must setup CNAME or A-alias record in route53.
+   - stages and deployment: when making changes to api gateway, you have to deploy it to `stages`(as many as you want, like dev, test, prod), each stage has its own config and can roll back to a history deployment.
+     - stage variables: like env variables for api gateway, can be used in lambda function ARN, http endpoint, parameter mapping template. use cases: config http endpoints your stages talk to; pass config parameters to lambda through mapping templates. stage variables to passed to the `context` object in the lambda. format: `${stageVariables.variableName}`
+     - stage variables & lambda aliases
+   - Open API: using API definition as code to define rest apis. import exsiting openapi3.0 spec to api gateway(method,method request,integration request,method response,aws extensions for API gateway and setup every single option), can export current api as openapi spec. using openapi we can generate sdk for our apps.
+     - rest api --request validation -- openapi (setup request validation by importing openapi definitions file): `params-only` or `all validator on the post/validation method`  
+   - caching: default TTL(300 secs), can be defined `per stage`, possible to override cache settings `per method`, can be encrypted, capacity(0.5GB--237GB), expensive-->use it in prod.
+     - cache invalidation: flush entire cache instantly. `header:Cache-Control:max-age=0`(with proper IAM authorization). any client could invalidate the cache if no invalidateCache policy imposed or not choosing `require authorization checkbox in the console`
    - canary deployment
    - monitoring, logging and tracing
  - ECS:
