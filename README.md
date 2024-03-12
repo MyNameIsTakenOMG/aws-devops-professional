@@ -228,25 +228,36 @@
      - rest api --request validation -- openapi (setup request validation by importing openapi definitions file): `params-only` or `all validator on the post/validation method`  
    - caching: default TTL(300 secs), can be defined `per stage`, possible to override cache settings `per method`, can be encrypted, capacity(0.5GB--237GB), expensive-->use it in prod.
      - cache invalidation: flush entire cache instantly. `header:Cache-Control:max-age=0`(with proper IAM authorization). any client could invalidate the cache if no invalidateCache policy imposed or not choosing `require authorization checkbox in the console`
-   - canary deployment
-   - monitoring, logging and tracing
+   - canary deployment: possible to enable canary deployments for any stage(usually prod). metrics and logs separate(for better monitoring). possible to override stage variables. this is blue/green deployment with lambda and api gateway
+   - monitoring, logging and tracing:
+     - cloudwatch logs: contain request/response body, enabled at stage level, and can override settings on a per api basis
+     - x-ray: enable to trace to get some extra info about the requests in the api gateway. x-ray api gateway and lambda gives the full picture.
+     - cloudwatch metrics: metrics are stage-specific, possible to enable detailed metrics. `CacheHitCount` & `CacheMissCount`: efficiency of cache. `Count`: total number of requests in a given period. `integrationLatency`: time between api gateway relay a request to the backend and api gateway receives the response from the backend. `latency`: time between api gateway receives a request from client and it returns a response to the client (includes integration latency and other API gateway overhead). 4xx client error, 5xx server error.
+     - api gateway throttling: account limit, soft limit (10000 rps), error 429 too many requests. can set stage limit & method limits to improve performance. or define `usage plans` to throttle per customer
+     - api gateway errors: 4xx: 400, 403, 429; 5xx: 502(bad gateway, incompatible output from a lambda proxy integration backend or out-of-order invocations due to heavy loads), 503(service unavailable), 504(integration time-out 29 secs)
  - ECS:
-   - overview
-   - auto scaling
-   - solution architectures
-   - logging
- - ECR
- - ECR - extra
- - EKS
- - EKS - logging
- - Amazon Kinesis
+   - overview: `ec2 launch type`, launch docker containers=launch `ecs task`, you must provision and maintain the infra(ec2 instances), each ec2 instance must have an ecs agent, aws takes care of containers. `fargate launch type`: no need for managing infra, is serverless, just need to create task definitions. aws run ecs tasks based on cpu/ram you need. to scale, just increase the number of tasks
+     - IAM roles: `ec2 instance profile`(only for ec2 launch type): used by ecs agent to talk to ecs, ecr, cloudwatch logs, secrets manager or ssm parameter store. `ecs task role`: defined in the `task definition`, allow each task to have a specific role to talk to other services.
+     - load balancer integrations: ALB suits for most cases, NLB for high throughput use cases.
+     - data volumes(EFS): works for both ec2 and fargate launch types. used for persistent multi-az shared storage for your containers. **note**: s3 cannot be used as file system.
+   - auto scaling: `ecs service auto scaling`: `aws application auto scaling`, three metrics: ecs service average cpu utilization, memory utilization, ALB request count per target. tracking strategies: target tracking(cloudwatch metric), step scaling(cloudwatch alarm), scheduled scaling(predictable changes). ecs service auto scaling!= ec2 auto scaling. `ec2 launch type -- auto scaling ec2 instances`: 1 auto scaling group(based on CPU usage), 2 ecs cluster capacity provider: paired with asg, used to scale infra for ecs tasks automatically.
+   - solution architectures: invoked by eventbridge, eventbridge schedule, SQS, intercept `stopped tasks` using eventbridge
+   - logging: logging with `awslogs` driver, need to turn on `awslogs` log driver, and config `logConfiguration` parameters in the task definition. `fargate launch type`: task execution role must have required permissions. `ec2 type`: use `cloudwatch unified agent and ecs container agent`, enable `ECS_AVAILABLE_LOGGING_DRIVERS` in `/etc/ecs/ecs.config`. `logging with sidecar container`: used for collecting logs and send to cloudwatch logs
+ - ECR: images storages service, access controlled by iam, support vulerability scan,versioning...
+ - ECR - extra: lifecycle policies, uniform pipeline(pull images regardless programming languages)
+ - EKS: support ec2 and fargate launch types. use case: if k8s already used on-prem or in other cloud. `node types`: `managed node group`, `self-managed nodes`, `aws fargate`. `data volumes`: EBS, EFS, FSx for lustre, FSx for netapp ontap
+ - EKS - logging: send logs to cloudwatch logs(control plane logs: API server, audit, authenticator, controller manager, scheduler. can select which ones to send to cloudwatch). `nodes & container logs`: use `cloudwatch agent` to send metrics, use `fluent bit` or `fluentd` to send logs to cloudwatch logs. container logs path: `/var/log/containers`, use `cloudwatch container insights` to get monitoring solution for nodes, pods, tasks and services.
+ - Amazon Kinesis: collect, process,and analyze streaming data in real-time.
  - kinesis data streams
-   - overview
-   - consumers scaling
- - kinesis data firehose
+   - overview: up to 1 yr retention, can replay, cannot be deleted, ordering(partition key), producers: SDK, kpl, kinesis agent, consumers: kcl, SDK, lambda, firehose, data analytics.
+     - provisioned mode: each shard 1mb/s in, 2mb/s out
+     - on-demand mode: default 4mb/s in , automatically scale based on throughput peak observed during last 30 days
+     - security: iam policies, https, kms, or cmk, vpc endpoints for kinesis to access vpc, monitor api calls using cloudtrail
+   - consumers scaling: `GetRecords.IteratorAgeMilliseconds`(cloudwatch metric): the difference between current time and the time when last record was written via `GetRecords` call. `IteratorAgeMilliseconds` > 0, then we are not processing the records fast enough
+ - kinesis data firehose: fully-managed , destinations: aws redshift, s3, opensearch; 3rd party; custom http endpoint. near real-time: write data in batch, buffer: 1mb minimal, interval(0 -- 900 secs). support many data format, transformation, or custom transformation using lambda, can send failed or all data to backup s3 bucket
  - kinesis data analytics
-   - overview
-   - using ML
+   - overview: `sql applications`--> real-time analytics on kds & kdf using SQL, add reference data from s3 to enrich streaming data. fully-managed. output: kds & kdf. use cases: time-series analytics, real-time dashboard, real-time metrics. `for apache flink`(was mks managed streaming kafka)--> use flink(java,scala or sql) to process and analyze streaming data. flink does not read from firehose (use kinesis analytics instead)
+   - using ML: `RANDOM_CUT_FOREST`: sql function used for anomaly detection, using recent history to compute model. `HOTSPOTS`: locate and return info about relatively dense regions in your data.
  - Route53
    - overview
    - routing policies:
