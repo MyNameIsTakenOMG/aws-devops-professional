@@ -259,41 +259,85 @@
    - overview: `sql applications`--> real-time analytics on kds & kdf using SQL, add reference data from s3 to enrich streaming data. fully-managed. output: kds & kdf. use cases: time-series analytics, real-time dashboard, real-time metrics. `for apache flink`(was mks managed streaming kafka)--> use flink(java,scala or sql) to process and analyze streaming data. flink does not read from firehose (use kinesis analytics instead)
    - using ML: `RANDOM_CUT_FOREST`: sql function used for anomaly detection, using recent history to compute model. `HOTSPOTS`: locate and return info about relatively dense regions in your data.
  - Route53
-   - overview
+   - overview: fully-managed, authoritative, health check, only service with 100% sla. `records`: type: A/AAAA/CNAME, domain name, value, routing policy, TTL. `hosted zones`(container for records): public hosted zones, private hosted zones(how to route traffic within one or more vpcs). $0.5 per month per hosted zone 
    - routing policies:
-     - weighted
-     - latency
-     - failover
- - RDS read replicas vs multi-AZ
- - Aurora - extra
+     - weighted: control the % of the requests that go to each specific resource. weights don't need to sum up to 100, can be associated with health check, dns records must have the same name and type. assign weight 0 to a record to stop sending traffic. if all records are weight 0, then all records will be returned equally.
+     - latency: direct traffic to the least latent for the clients. latency is based on traffic between users and aws regions, can be associated with health check.
+     - failover: active-passive
+ - RDS read replicas vs multi-AZ:
+   - `read replicas for read scalability`: up to 15, replication is async, can be promoted to their own DB having their own lifecycle, apps must update the connection string. `use cases`: create a replica for reporting app or data analytics. only for read operations. `network cost`: same region is free, cross-region is not free.
+   - multi-az: disaster recovery. sync replication. one dns name -- automatically failover. no manual intervention, not for scaling. read replica can be setup as multi-az for disaster recovery.
+   - from single az to multi az: zero downtime(no need to stop db). click on 'modify' button, and a snapshot is taken, a new db is restored from the snapshot, then synchronization is established between two db instances.
+ - Aurora - extra: `auto scaling`: writer endpoint and reader endpoint. `global aurora`: `aurora cross region read replicas` or `aurora global database`(recommended): 1 primary region(read/write), and up to 5 secondary regions(read-only), each of which can has up to 16 read replicas. promoting another region(for disaster recovery) has a RTO of < 1 min. typical cross-region replication takes less than 1 sec
+   - unplanned failover: aurora endpoint stored in ssm parameter store, and use a lambda to health check global aurora, then send a notif to admin if it's failed, then admin will promote another region and update the endpoint in the ssm parameter store.
+   - global application: each region has a local aurora db and a aurora global shared datasets.
  - elasticCache
-   - overview
-   - redis cluster modes
+   - overview: serverless service, support redis or Memcached, help load off read intensive workloads of db, or make your app stateless. `use case`: db cache, must have an invalidation strategy to make sure only the most current data is used in there. user session store.
+     - redis vs Memcached: redis--> data durability, memcached--> pure data caching, multi-threaded architecture
+   - redis cluster modes:
+     - cluster mode disabled: one shard, all nodes have all the data, one primary node, up to 5 replicas, asynchronous replication, multi-az enabled by default for failover. horizontal scale out/in by adding/removing read replicas. vertical scale up/down the node type. elasticache will internally create a new node group and replicate data to the new group.
+     - cluster mode enabled: data is partitioned across shards(helpful to scale write), each shard is the same as `cluster mode disabled`, multi-az capability. up to 500 nodes per cluster(consists of a bunch of shards)
+       - auto scaling: increase/decrease the desired shards or replicas. support both target tracking and scheduled scaling policies, only for `cluster mode enabled`. the cloudwatch metric: `elasticachePrimaryEngineCPUUtilization`, and update apps to use the cluster `configuration endpoint`
+       - redis connection endpoints: `standalone node`: one endpoint for read and write. `cluster mode disabled cluster`: primary endpoint for all write, reader endpoint for evenly split read across all read replicas, node endpoint for read. `cluster mode enabled cluster`: configuration endpoint for all read/write, node endpoint for read
  - dynamodb
-   - overview
+   - overview: full-managed, highly available with replication across multiple az. no maintenance or patching, always available. standard & infrequent access(IA) table class. `basics`: made of tables, each table has a primary key and has an infinite numer of items. each item size is 400kb at maximal. support scalar types, document types, set types. can repidly evolve schemas. `read/write capacity modes`: provisioned mode(default) with auto-scaling feature. on-demand mode: auto scale up/down, more expensive, good for unpredictable workloads
    - advanced features
+     - accelerator: fully-managed, highly available, seamless in-memory cache for dynamodb, help solve read congestion, microseconds latency for cached data, 5 min TTL default, no app logic modification. for elasticache, it's good for storing aggregation result.
+     - stream processing: ordered stream of item-level modifications in a table. use cases: react to real-time changes, data analytics, cross-region replication... `dynamodb streams`(24 hrs, limited consumers) and `kinesis data streams`(1 yr retention, more consumers,)
+     - global tables: two-way replications, active-active replication(read/write in any region), must enable dynamodb stream first
+     - TTL: delete items after an expiry timestamp. use cases: reduce stored data by only keeping current items, adhere to regulatory obligations, web session handling...
+     - backups for disaster recovery:
+       - continuous backups using point-in-time recovery(PITR): optionally enabled for last 35 days, or recover to any time within the backup window, it will crete a new table.
+       - on-demand backups: full backups for long-term retention until deleted explicitly, no affect on performance or latency, can be config and managed by aws backup, it will create a new table
+     - integration with s3: export to s3(enable PITR)--> works for last 35 days, no affect on read capacity, can perform data analysis, or ETL on top of s3 data, format: json or ion. import from s3--> csv, dynamodb json or ion format, no consume on write capacity, create a new table, any error will be sent to cloudwatch logs
  - AWS DMS
-   - overview
-   - monitoring
- - S3 - replication
+   - overview: quickly and securely migrate databases to aws, resilient, self healing, no affect on source database. support homogeneous migrations and heterogeneous migrations. continuous data replication using CDC(change data capture). an ec2 instance must be running DMS.
+     - sources: on-prem dbs, azure sql db, aws rds including aurora, s3, documentdb
+     - targets: on-prem dbs, aws rds, redshift, opensearch , kinesis data stream, kafka, nepture, documentdb,redis
+     - aws schema conversion tool(sct): convert db schema from one engine to another
+     - multi-az deployment: standby replica(synchronously)
+   - monitoring:
+     - replication task monitoring: task status(task status bar), table state
+     - cloudwatch metrics: host metrics, replication task metrics, table metrics 
+ - S3 - replication: cross-region replication(crr, compliance, replication across accounts, low latency access), same-region replication(srr, log aggregation, live replication between prod and test accounts). copying is asynchronous, must have iam permissions
  - AWS storage gateway
-   - overview
-   - file gateway cache refresh
+   - overview: hybrid cloud, unlike EFS/NFS, s3 is a proprietary storage technology, to expose s3 data on-prem, we need aws storage gateway(allow on-prem to use aws cloud s3 data). use cases: disaster recovery, backup&restore, tiered storage. types: file, volume, tape
+   - file gateway cache refresh: `RefreshCache api`--> file gateway will automatically update the file cache when user write files to file gateway which will be synced with s3 bucket. or call `RefreshCache` api to refresh the cache for file gateway if a user upload file directly to s3. `Automating cache refresh`--> automatically refresh file gateway periodically
  - Auto scaling groups
-   - scaling policies
-   - lifecycle hooks
-   - event notifications
-   - termination policies
-   - warm pools
- - application auto scaling
+   - scaling policies:
+     - dynamic scaling: `target tracking scaling`,`simple/step scaling`(with cloudwatch)
+     - scheduled scaling: for known usage patterns
+     - predictive scaling: continuously forecast load and schedule scaling ahead
+     - good metrics to scale on: `CPUUtilization`, `RequestCountPerTarget`, `Average Network In/Out`, `Any custom metric`
+     - scaling cooldown: cooldown period(default 300 sec) after a scaling activity, during which asg will allow for metrics to stablize. advice: use ready-to-use ami to reduce configuration time in order to be serving request fasters and reduce the cooldown period.
+   - lifecycle hooks: you can perform some actions before an ec2 instance is launched or terminated, can be integrated with eventbridge, sns, sqs
+   - event notifications: sns notifications: 4 events for asg: ec2_instance_launch, ec2_instance_launch_error, ec2_instance_terminate, ec2_instance_terminate_error. eventbridge: can have more events on different conditions(successful, failed,cancelled...) 
+   - termination policies: `default termination policy`: select az with more instances, terminate one with the oldest launch template or launch configuration, or terminate one with the same launch template that is closest to the next billing hour. `aoolcationStrategy`, `OldestLaunchTemplate`,`OldestLaunchConfiguration`,`ClosestToNextInstanceHour`,`NewestInstance`,`OldestInstance`. **note**: can use one or more policies, just define the evaluation order. also can define custom termination policy backed by lambda function
+   - warm pools: scale-out latency strategy by maintaining a pool of pre-initialized instances(running--not cost saving, stopped, hibernated). warm pool not contribute to asg metrics that affect scaling policies. warm pool size: `minimum warm pool size`,`max prepared capacity`,`or max prepared capacity`
+     - instance reuse policy: by default, asg will terminate instance when scale in, then launch a new instance in warm pool. while instance reuse policy allow to return instances to the warm pool when scale in
+     - warm pool--lifecycle hooks(warmed:pending:wait event)
+ - application auto scaling: monitor your apps and automatically adjusts capacity to maintain steady, predictable performance at lowest cost. setup scaling for multiple resources across multiple services from a single place. point to your app and select the service and resource you want to scale(no need alarms and scaling actions for each service). search for resources/services using cloudformation stack,tags,or ec2 asg. build `scaling plans` to automatically add/remove capacity from your resources in real-time as demand changes. support target tracking , step, and scheduled scaling policies.
  - ELB
-   - ALB rules deep dive
-   - extra
- - NAT gateway
- - multi-AZ architectures
- - blue-green architectures
- - multi-region architectures
- - disaster recovery
+   - ALB rules deep dive: each rule has a target, support actions(forward,redirect,fixed-reponse), conditions: host-header,request method,path pattern,source IP, http header, query string. `target group weighting`: specify weight for each target group, example:blue/green deployment. distribute the traffic for your apps.
+   - extra: `dualStack networking`: allow clients talk with elb using ipv4 and ipv6, support ALB and NLB, can have mixed ipv4 and ipv6 targets in seperate target groups. **note**: az must be added/enabled for instances to receive traffic. `privatelink integration`: for overlapping ip addresses in two vpcs, instead of using vpc peering, we create vpc interface endpoint on one end(vpc1), and connect to NLB at the other end(vpc2)
+ - NAT gateway: aws-managed NAT, az-specific, cannot be used by ec2 instances in the same subnet, require an internet gateway, no security group required
+   - high availability: resilient in a single az, must create multiple NAT gateways in multiple az.
+ - multi-AZ architectures: implicit(s3 except onezone-IA, dynamodb, all aws managed services), explicit(EFS,ELB,ASG,beanstalk,Rds,elasticache,aurora,opensearch,jenkins)
+ - blue-green architectures: for an ALB, define two target groups(blue,green), and connect them to the same listener, then switch traffic at once or use weighted TG. or if we have one ALB for one target group, then we can use route53 switch traffic, but that depends on clients ttl cache. if using api gateway, we can use `prod stage canary`, or more granular, we can use lambda alias, no changes to api gateway or client
+ - multi-region architectures: with route53: health check-->automated dns failover. monitor an endpoint, monitor other health checks, or monitor cloudwatch alarms. health checks are integrated with cloudwatch metrics.
+ - disaster recovery:
+   - types: `on-prem -> on-prem`(traditional but expensive), `on-prem -> cloud`(hybrid), `cloud region 1 -> cloud region 2`(fast, inexpensive). `RPO`(recovery point objective),`RTO`(recovery time objective)
+   - strategies:
+     - backup and restore(High RPO,RTO)
+     - pilot light(a small version of app is always running, useful for the critical core, such as db)
+     - warm standby(full system is up and running, but at minimum size)
+     - hot site approach(very low RTO, very expensive, full production scale is running on aws and on-prem, route53-active active)
+   - tips:
+     - backup: ebs snapshot, rds automated backup/snapshot,... regular push to s3 and other storage classes. from on-prem using snowball or storage gateway.
+     - high availability: route53 to direct from region to region, rds, elasticache, efs multi-az, s3. site-to-site vpn as a recovery from direct connect
+     - replication: rds replication, aurora + global db, replication from on-prem db to rds, storage gateway
+     - automation: cloudformation, elastic beanstalk to rebuild new env, recover ec2 if cloudwatch alarm triggered, lambda for customized automation.
+     - chaos: ex. netflix randomly terminateing ec2 instances
 ## Monitoring and Logging
  - cloudwatch metrics
  - cloudwatch custom metrics
