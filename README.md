@@ -339,18 +339,37 @@
      - automation: cloudformation, elastic beanstalk to rebuild new env, recover ec2 if cloudwatch alarm triggered, lambda for customized automation.
      - chaos: ex. netflix randomly terminateing ec2 instances
 ## Monitoring and Logging
- - cloudwatch metrics
- - cloudwatch custom metrics
- - cloudwatch anomaly detection
- - amazon lookout for metrics
- - cloudwatch-logs
+ - cloudwatch metrics: metric is a variable to monitor, which belongs to namespaces, a dimension is an attribute of a metric. up to 30 dimensions per metric, metric has timestamps. cloudwatch dashboard of metrics, can create custom metrics.
+   - metric streams: near real-time delivery, targets: firehose, or 3rd party services. or option to filter metrics to only stream a subset of them. 
+ - cloudwatch custom metrics: use api `PutMetricData` to send your own custom metrics to cloudwatch, can also use dimensions. metric resolution `storageResolution` api parameter: standard: 1 min, hight resolution: 1/5/10/30 sec high cost. **important**: accepts metric data points two weeks in the past and two hours in the future(make sure ec2 instance configured correctly) 
+ - cloudwatch anomaly detection: continuously analyze metrics to determine normal baselines and surface anomalies using ML algorithm. a model will be created based on the past data, and show you the values out of the normal range, allow you to create alarms based on metric's expected value(instead of static threshold), can also exclude specified time periods or events from being trained.
+ - amazon lookout for metrics: more complete, automatically detect anomalies and identify root cases using ML without manual intervention. can integrate with different aws services (not just cloudwatch)and 3rd party saas apps through appFlow
+ - cloudwatch-logs: `log groups`,`log stream`,`log expiration policies`, by default encrypted, or can use kms, logs can be sent to s3, kinesis data streams, kinesis data firehose, lambda, opensearch
+   - source: SDK, cloudwatch unified agent, cloudwatch log agent, ecs, lambda, vpc flow logs, api gateway, cloudtrail, route53 dns log
+   - insights: cloudwatch logs insights: search and analyze log data, built-in query language, can query multiple log groups in different aws accounts, not real-time
+   - s3 export: logs data needs up to 12 hrs to become available for export, api call `CreateExportTask`, not real-time, use logs subscriptions instead.
+   - logs subscriptions: get real-time log events with subscription filter, then send logs to kinesis data streams, firehose or lambda.
+   - cloudwatch log aggregation multi-account & multi-region
+   - cross-account subscription
  - cloudwatch-logs - live tail
- - cloudwath-logs - metric filters
- - all kinds of logs
- - cloudwatch agent & cloudwatch logs agent
- - cloudwatch alarms
- - cloudwatch synthetics
- - amazon Athena
+ - cloudwath-logs - metric filters: cloudwatch logs can use filter expression, the filter dont retroactively filter data, only publish the metric data points for events that happen after the filter was created. able to specify up to 3 dimensions for the metric filter(optional)
+ - all kinds of logs:
+   - application logs: produced by app code, written to a local file system. on ec2, use cloudwatch agent to send logs. for lambda, ecs or fargate, or elastic beanstalk, direct integration with cloudwatch logs
+   - operating system logs(event logs, system logs): produced by ec2 or on-prem, informing system behavior, using cloudwatch agent to send to cloudwatch logs
+   - access logs: list of all the requests for individual files that people have requested from website. usually load balancers, proxies, web servers,etc. aws provides some access logs
+   - aws managed logs: ELB access logs-->s3, cloudtrail logs--> s3 and cloudwatch logs, vpc flow logs --> s3 and cloudwatch logs, route53 access logs --> cloudwatch logs, s3 access logs --> s3, cloudfront access logs --> s3
+ - cloudwatch agent & cloudwatch logs agent: install cloudwatch logs agent on ec2 or on-prem to send logs to cloudwatch logs. `cloudwatch logs agent` & `unified agent`(newer version, can collect additional system-level metrics such as ram, processes,etc), use ssm parameter store to config centrally
+   - unified agent -- metrics: CPU, disk metrics, ram, netstat, processes, swap space
+ - cloudwatch alarms: various options(%,min,max...). state: ok, insuffient_data, alarm. period: length of time to evaluate the metric.
+   - targets: actions on ec2 instances. ec2 auto scaling. amazon sns
+   - composite alarms: monitor multiple states of alarms, using `and` and `or` conditions, help to reduce `alarm noise`
+   - ec2 instance recovery: status check(instance status, system status). recovery: same private, public, elastic Ip, metadata, placement group
+   - good to know: can create alarms based on metrics filters. to test alarms and notifications, set the alarm state to `Alarm` using cli
+ - cloudwatch synthetics canary: a configurable script that monitor your apis, URLs, websites... reproduce what your customers do to find issues before customes are impacted. check the availability and latency of your endpoints and can store the load time data and screenshots of the UI. written in nodejs or python. can access to a chrome browser, can run once or on a regular schedule.
+   - blueprint: `heartbeat monitor`,`api canary`,`broken link checker`,`visual monitoring`,`canary recorder`,`gui workflow builder`  
+ - amazon Athena: serverless query service to analyze data in s3 using standard SQL language, support csv,json,orc,arvo, and parquet. commonly used with aws quicksight for dashboard. use case: BI/analytics/analyze& query vpc flow logs, elb logs, cloudtrail logs, etc....
+   - performance improvement: use `columnar data` for cost-savings(less scan), apache parquet or orc is recommended. use `aws Glue` to transform data to parquet or orc. `compress data` for smaller retrieves. `partition datasets` in s3 for easy querying(only query certain amount of data). `use larger files`(> 128mb) to minimize overhead
+   - federated query: can run sql query across sql or non-sql dbs or custom data sources(aws, on-prem). use `data source connectors` that run on aws lambda to run federated queries(such as cloudwatch logs, dynamodb, rds,...), then store the results back in s3.
 ## Incident and Event Response
  - eventBridge
    - overview
