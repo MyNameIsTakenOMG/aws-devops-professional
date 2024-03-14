@@ -372,23 +372,31 @@
    - federated query: can run sql query across sql or non-sql dbs or custom data sources(aws, on-prem). use `data source connectors` that run on aws lambda to run federated queries(such as cloudwatch logs, dynamodb, rds,...), then store the results back in s3.
 ## Incident and Event Response
  - eventBridge
-   - overview
+   - overview: schedule--cron jobs; event pattern--event rules to react to a service doing something; trigger lambda functions, send sqs/sns messages... can optionally filter events. can have default event bus, partner event bus, and custom event bus. a reource-based policies can be applied to event buses. can archive events(all/filter for indefinitely or a period), able to replay archived events for debugging. can infer the event schema, and schema registry allows you to generate code for your app, schema can be versioned. eventbridge uses resource-based policy to manage access. use case: aggregate all events from aws organization in a single aws account or region.
    - content filtering
    - input transformation
- - S3 - event notifications
- - S3 - object integrity
+ - S3 - event notifications: deliver events in secs or mins. for sns, sqs, lambda, we define resource policy for access management. all s3 events will be sent to eventbridge which has more than 18 destinations of aws services: advanced filtering, multiple destinations, eventbridge capabilities
+ - S3 - object integrity: s3 uses `checksum` to validate the integrity of uploaded objects. `using MD5`: user calculated MD5 and add a http header: content-md5 to s3, and s3 will calculate md5 itself and then compare the two. `using md5 & etag`: s3 has an etag for object which is equal to md5 if using sse-s3, then `get object metadata`, compare the etag with local version.
  - AWS health dashboard
-   - overview
-   - events & notifications
- - EC2 instance status checks
+   - overview: `service history`(show all regions, all services health, historical info for each day, has a RSS feed to subscribe to), `your account`(provides alerts and remediation guidance when aws is facing events that may impact you, giving personal view into performance and availability of aws services you are using. shows relevant and timely info to help manage events in progress and provides proactive notif to help plan for scheduled activities. can aggregate data from entire aws organization. global service)
+   - events & notifications: integrate with eventbridge to react to aws health events in your account(possible for account events--affected resources in your account and public events--regional availability of a service). use cases: send notifs, take corrective action, capture event info, remediation...
+ - EC2 instance status checks: `system status checks`(any software/hardware issues on the physical host, check aws health dashboard for any critical maintenance. resolution: stop and start a new instance--instance migrated to a new host), `instance status checks`(software/network config, resolution: reboot the instance or change instance config)
+   - status checks -- cloudwatch metrics & recovery:
+     - metrics: `statusCheckFailed_system`,`statusCheckFailed_instance`,`statusCheckFailed`(for both)
+     - option1: cloudwatch alarm-- recover ec2 instance with the same private/public IP, EIP, metadata, and placement group.
+     - option2: asg-- set `min/max/desired` to 1 to recover an instance which will launch a new instance(ips will be different)
  - cloudtrail
-   - overview
-   - eventBridge integration
- - SQS - dead letter queues
- - SNS - redrive policy
- - AWS X-Ray
- - AWS X-Ray with Beanstalk
- - AWS Distro for openTelemetry
+   - overview: get a history of events/api calls in your aws account. can put logs from cloudtrail to cloudwatch logs or s3. a trail can be applied to single region or all regions(default).(if a resource is deleted, investigate the cloudtrail first)
+     - management events(default): operations happened on resources, can separate `read events` and `write events`
+     - data events: by default data events are not logged(high volume operations)
+     - cloudtrail insights events(not free): has to enable to detect unusual activity in your account. analyze normal management events to create a baseline, then continuously analyzes write events to detect unusual patterns, the insights events appear in the cloudtrail console, sent to s3 and eventbridge
+     - cloudtrail events retention: 90 days in cloudtrail, then log them to s3 and use athena to analyze. 
+   - eventBridge integration: cloudtrail events will appear in the eventbridge
+ - SQS - dead letter queues: we can set `MaximumReceives` threshold, then message will go to dead letter queue if exceeded. dlq type should be the same with the source queue(fifo--fifo,standard--standard). make sure to process messages in the dlq befire expiry date(good to set retention). `redrive to source`: manual inspection and debugging, once fixed, redrive the message from dlq to the source queue in batches without writing custom code.
+ - SNS - redrive policy: for messages not delivered successfully, we set a dlq(sqs, or sqs fifo), and create a `redrive policy`. the dlq is attached to sns subscription-level(not topic level)
+ - AWS X-Ray: visual analysis of our apps(distributed system). tracing requests across your microservices. integration with ec2(x-ray agent),ecs(x-ray agent or docker container),lambda, beanstalk(automated agent installed),api gateway(helpful to debug, like 504). need iam permissions to x-ray. 
+ - AWS X-Ray with Beanstalk: beanstalk include x-ray daemon, just to enable `x-ray`. make sure instance profile has iam permissions for x-ray daemon to function correctly. make sure app code has x-ray sdk. **note**: x-ray daemon not provided for multi-container
+ - AWS Distro for openTelemetry: vendor-agnostic, open-source, production-ready aws-supported distributed tracing framework. collect distributed traces and metrics from your apps, and collect metadata from your aws resources and services. `auto-instrumentation agents` to collect traces without changing your code. can send to x-ray, cloudwatch, prometheus... migrate from x-ray to openTelemetry if for standard apis or send traces to multiple destinatioins simultaneously.
 ## Security and Compliance
  - AWS config
    - overview
