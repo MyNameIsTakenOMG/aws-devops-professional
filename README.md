@@ -399,18 +399,31 @@
  - AWS Distro for openTelemetry: vendor-agnostic, open-source, production-ready aws-supported distributed tracing framework. collect distributed traces and metrics from your apps, and collect metadata from your aws resources and services. `auto-instrumentation agents` to collect traces without changing your code. can send to x-ray, cloudwatch, prometheus... migrate from x-ray to openTelemetry if for standard apis or send traces to multiple destinatioins simultaneously.
 ## Security and Compliance
  - AWS config
-   - overview
-   - configurations recorder and aggregator
-   - conformance packs
-   - organizational rules
+   - overview: help audit and record compliance of your aws resources. can receive alerts for any changes. per-region service. can be aggregated across regions and accounts. possible to storing config data in s3
+     - rules: managed rules or custom rules. can be evaluated or triggered for any change or at regualr intervals. rules dont prevent actions from happening. no free tier.
+     - resource: view compliance, config, cloudtrail api calls of resources over time.
+     - remediations: can trigger ssm automation document to remediate non_compliant issues.
+     - notifications: use eventbridge to trigger notifs when non_compliant. use sns to send notif when config or conpliance changes
+   - configurations recorder and aggregator: `recorder`: store configurations of aws resources as `configuration item` which is a point-in-time view of all attributes of an aws resource. created whenever a change detected. the recorder only record the resource types you specify. must created before aws config can track(when using aws cli or console to enable aws config, created automatically). `aggregator`: created in one central aggregator account. aggregator rules, resources, etc... across multiple accounts and regions. if using aws organization, no need for individual authorization. rules are created in each individual source aws account. can deploy rules using cloudformation stacksets to multiple targets
+   - conformance packs: collection of aws config rules and remediation actions. in yaml format, similar to cloudformation. deploy to an aws account and regions or across an aws organization. pre-built sample or custom packs. can include `custom config rules` backed by lambda to evaluate  the compliance. can use `ssm parameter store`. can designate a delegated admin to deploy conformance packs to your aws organization(a member account). can be integrated into cicd
+   - organizational rules: conformance rules-->accounts and organization. organizational rules-->only for aws organization, and managed at organizational level, one rule at a time vs many rule at a time(conformance packs)
  - AWS organizations
-   - overview
-   - service control policy (SCP)
+   - overview: `OrganizationAccountAccessRole` has full permissions in the member account to the management account, used to perform admin tasks in the member account(e.g. create iam users), can be assumed by iam users in the management account. automatically added to all new member accounts created in the aws organization, but must created this role manually if to invite an existing member account.
+     - multi account strategies: create accounts based on envs, or departments, or regulatory restrictions(using SCP) / multi account vs one account multi vpc / using tagging standards for billing purposes / enable cloudtrail on all accounts to send logs to central s3 account / send cloudwatch logs to central logging account / create an account for security.
+     - feature modes: `consolidated billing features`: single payment method for all accounts, pricing benefits from aggregated usage(volume discount for ec2, s3...). `all eatures`(default): include consolidated billing, scp. invited accounts must approve enabling all features, able to apply scp to prevent member accounts from leaving the org. cannot switch back to `consolidated billing feature only`
+     - reserved instances: `consolidated billing feature` treat all accounts as one account, all accounts can benefit from reserved instances purchased by any other account, the payer account(management account) can turn off the sharing of reserved instance discount and saving plans discount. and to share the reserved instance or saving plan discount with an account, both accounts must have sharing turned on.
+     - moving account between orgs: first remove member account, then invite it from another org, then accept the invitation.  
+   - service control policy (SCP): allow or deny iam actions. applied to OU or Account level. does not apply to management account. scp is applied to all users or roles in the account, including root user. does not affect service-linked roles which used for other aws service to talk with aws org. scp must have explicit `allow` to allow some actions
  - AWS control tower
-   - overview
-   - landing zones
+   - overview: runs on top of aws organization. setup and govern a secure and compliant multi-account aws env based on best practice. automate setup envs, policy management using guardrails, detect policy violations and remediate them, monitor compliance through a dashboard.
+     - account factory: automate account provisioning and deployments using aws service catalog, enables you to create pre-approved baseline and config options for aws accounts in your org.
+     - detect and remediate policy violations: `guardrail`: preventive(using scp), detective(using aws config)
+     - guardrails levels: `mandatory`(enforced by aws control tower), `strongly recommended`(based on aws best practice ,optional),`elective`(commonly used by enterprise, optional)
+   - landing zones: automatically provision secure, compliant, multi-account env based on aws best practices. it consists of: aws organization, account factory, organizational units, service control policies(scp), iam identity center, guardrails(rules and policies), aws config(monitor and assess resources compliance with guardrails)
    - account factory & migrating accounts
-   - customizations for AWS control tower (CFCT)
+     - account factory customization(AFC): automatically customize resources in new and existing accounts created through account factory. `custom blueprint`: cloudformation template with resources and configs used to customize accounts. defined in the form of service catalog product. recommend to create a `hub account` to store all custom blueprints. only one blueprint can be deployed to the account. each time a new account created, an event will be sent to eventbridge.
+     - migrate an aws account to control tower: first move the account to the unregistered OU, then create iam role(awsControlTowerExecution), then create conformance packs, then evaluate compliance results of config conformance packs, then remove config delivery & config recorder created during evaluation process, then move into target OU and setup control tower successfully.
+   - customizations for AWS control tower (CFCT): 
    - config integation
    - account factory for terraform
  - IAM identity center
@@ -421,18 +434,21 @@
    - overview
    - policies
  - Amazon guardduty
-   - overview
-   - advanced
+   - overview: threats discovery service using ML(30 days trial). input data: vpc flow logs, dns logs, cloudtrail events logs. can setup eventbridge to get notified. can protect against `cryptoCurrency` attacks (has a dedicated finding for it)
+   - advanced: 
    - cloudformation integration
- - amazon detective
+ - amazon detective: analyze and investigate and identify the root cause of security issues or suspicious activities using ML and graphs. automatically collects and process events from vpc flow logs, cloudtrail, and guardDuty and create a unified view. produce visualizations with details and context to get to the root cause.
  - amazon inspector
-   - overview
-   - EC2 setup
- - EC2 instance migration using AMIs
+   - overview: security accessments. for ec2 instance, using ssm agent to analyze network accessibility, os known vulnerabilities. for container images push to aws ecr, scan images, for lambda function, scan software vulnerabilities, code, packages. then send reports to aws security hub and send findings to eventbridge. a risk score is associated with all vulnerabilities for priorirization. continuous scanning infra only when needed.
+   - EC2 setup: having ssm agent running in the ec2 instance with iam role or default host management config for ssm, outbound 443 to ssm endpoint. then aws inspector is evaluating the inventory results in the ssm.
+ - EC2 instance migration using AMIs: create an AMI, then launch/restore a new ec2 instance in another az from the AMI.
+   - cross-account AMI sharing: sharing AMI does not affect the ownership of the AMI. can only share AMIs that have unencrypted volumes and encrypted volumes with cmk. if you share AMI with encrypted volumes, you must also share cmk to the other side and iam permissions.
+   - cross-account AMI copy: to copy AMI shared with you, you are the owner of the target AMI in your account. the owner must grant the read permission for the storage backing the AMI(ebs snapshot). if shared AMI has encrypted snapshots, then the owner must share the key with you as well. can encrypt AMI with your own cmk while copying.
  - AWS trusted advisor
-   - overview
-   - architectures
- - AWS secrets manager
+   - overview: no need to install anything--high level aws account assessment. 6 categories: cost optimization, performance, security(default),fault tolerance,service limits(default),operational excellence. upgrade to `business` or `enterprise` support plan to unlock all checks. 
+   - architectures: integrated with eventbridge to monitor some resources such as usage of ec2 instance, or some service quotas (50+ service quotas)
+ - AWS secrets manager: newer service, meant for storing secrets. able to force rotation of secrets every x days. automate generation of secrets on rotation(lambda). secrets encrypted using kms, integrated with rds, aurora. mostly meant for rds integration.
+   - multi-region secrets: read replicas synced with primary secret. use cases: disaster recovery, multi-region apps, multi-region db...
 ## Other Services
  - AWS tag editor
  - AWS quicksight
