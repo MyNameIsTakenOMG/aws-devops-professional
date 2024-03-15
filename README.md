@@ -472,6 +472,14 @@
  - AWS secrets manager: newer service, meant for storing secrets. able to force rotation of secrets every x days. automate generation of secrets on rotation(lambda). secrets encrypted using kms, integrated with rds, aurora. mostly meant for rds integration.
    - multi-region secrets: read replicas synced with primary secret. use cases: disaster recovery, multi-region apps, multi-region db...
 ## Other Services
- - AWS tag editor
- - AWS quicksight
- - AWS glue
+ - AWS tag editor: allow to manage tags of multiple resources at once. add/update/delete. search tagged/untagged resources in all aws regions
+ - AWS quicksight: serverless ML BI service to create interactive dashboards. fast, automatically scalable, embeddable, with per-session pricing. use cases: data visualization, business analytics, ad-hoc analysis, get business insight. integrated with rds, aurora, athena, redshift, s3...
+ - AWS glue: managed ETL service, fully serverless service.
+   - convert data into parquet format(columnar type, which is good for athena).
+   - glue data catalog: catalog of datasets-- glue data crawler to write metadata of data sources into glue data catalog tables(metadata), then athena, redshift spectrum, emr will leverage it
+   - things to know:
+     - `glue job bookmarks`(prevent re-processing old data).
+     - `glue elastic views`: combine and replicate data across multiple data stores using SQL, no custom code, glue monitor for changes in the source data
+     - `glue databrew`: clean and normalize data using pre-built transformation
+     - `glue studio`: new gui to create, run and monitor etl jobs in glue
+     - `glue streaming etl`(built on apache spark structured streaming): compatible with kinesis data streaming, kafka, MSK(aws managed kafka) 
