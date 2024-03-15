@@ -423,20 +423,42 @@
    - account factory & migrating accounts
      - account factory customization(AFC): automatically customize resources in new and existing accounts created through account factory. `custom blueprint`: cloudformation template with resources and configs used to customize accounts. defined in the form of service catalog product. recommend to create a `hub account` to store all custom blueprints. only one blueprint can be deployed to the account. each time a new account created, an event will be sent to eventbridge.
      - migrate an aws account to control tower: first move the account to the unregistered OU, then create iam role(awsControlTowerExecution), then create conformance packs, then evaluate compliance results of config conformance packs, then remove config delivery & config recorder created during evaluation process, then move into target OU and setup control tower successfully.
-   - customizations for AWS control tower (CFCT): 
-   - config integation
-   - account factory for terraform
+   - customizations for AWS control tower (CFCT): gitops-style customization framework created by aws, helps add customization to your landing zone using custom cloudformation templates and scps. automatically deploy resources to new aws accounts created using account factory.**note**: cfct is different from afc(account factory customization), blueprint
+   - aws config integration: using aws config to implement `detective guardrails`, automatically enabled aws config in enabled regions. aws config configuration history and snapshots sent to s3 bucket in a centralized log archive account. control tower uses cloudformation stacksets to create resources like config aggregator,...
+     - `aws config conformance packs`: a set of config compliance rules & remediations. for example, when a new account created in control tower, an event will be sent to eventbridge which can be used to trigger a lambda to create stacksets and deploy conformance packs into the account.
+   - account factory for terraform(AFT): help provision and customize aws accounts in control tower through terraform using a deployment pipeline. create `account request terraform file` to trigger aft workflow for account provisioning. `built-in feature options`(disabled by default): `aws cloudtrail data events`,`aws enterprise support plan`,`delete the aws default vpc`. terraform module maintained by aws. works with terraform open-source, terraform enterprise, and terraform cloud.
  - IAM identity center
-   - overview
-   - extra
- - AWS web application firewall (WAF)
+   - overview: successor to aws single sign-on: one login for all aws accounts in aws organization. identity providers: built-in identity store in iam identity center, 3rd party: active directory, okta...
+     - permission sets assigned to users and groups
+     - similar to other apps, such as salesforce, slack, micro 365, or some custom apps
+     - attribute-based access control(ABAC): fine-grained permissions based on users' attributes. define permission once, then change the value of attributes of users.
+   - extra: `external identity providers`: saml2.0, you must create users and groups in iam identity center that are identical to the users and groups in the external identity providers, because saml2.0 cannot query the idP to learn about users and groups. thus we can use `SCIM`(system for cross-domain identity management): automatic provisioning(synchronization) of users identities from an external idp into iam identity center. must be supported by external idp, and perfect complement to using smal2.0
+   - attribute-based access control: fine-grained permissions based on users' attributes stored in iam identity center identity store. user attributes can be used in permission sets and resource-based policy. user attributes are mapped from idp as key-value pairs
+   - multi-factor authentication: every time they sign-in(always on), or only when their sign-in context changes(context-aware)
+ - AWS web application firewall (WAF): protect web apps from common web exploits (layer 7). on ALB(localized rules), on Api gateway(rules running at the regional or edge level), on cloudfront(rules globally on the edge locations), on Appsync(protect your graphql apis). not for ddos protection(using aws shield). define web ACL(access control list): include ip addresses, http headers, body, or url strings, protect common attack--sql injection, xss. size constraints, geo match, rate-based rule, rule actions: count | allow|block|captcha
+   - managed rules: over 190 managed rule, ready-to-use rules. `baseline rule groups`: general protection from common threats, `use-case specific rule groups`,`ip reputation rule groups`,`bot control managed rule group`
+   - web ACL logging: can send logs to cloudwatch logs (5mb per sec), s3 bucket(5 min interval), kinesis data firehose(limited by firehose quotas)
+   - solution architecture -- enhance cloudfront origin security with aws waf & aws secrets manager: we can setup aws waf at cloudfront with web acl(some protection), then from cloudfront, we can create `custom HTTP header`(such as x-origin-verify:xxxxxxxx), then setup aws waf in front of our ALB to filter the http header. the http header string can be managed by secret manager with auto-rotate and a lambda used to update the custom http header string.
  - AWS firewall manager
-   - overview
+   - overview: manage rules in all accounts of aws organization. rules are applied to new resources as they are created across all accounts or future account in the organization.
+     - security policy: `waf rules`, `aws shield advanced`,`security groups`, `aws network firewall(vpc level)`, `route53 resolver DNS firewall`, policies are created at the region level.
+     - aws waf, firewall manager, shield
    - policies
+     - aws waf: enforce web acls to all albs in all account of aws organization. identify resources that dont comply, but do not auto remediate them. or auto remediate any non-compliant resources
+     - shield advanced: enforece shield advanced protections to all accounts in the aws org. option to view only compliance or auto remediate
+     - security groups: common(applying sgs to all ec2 instances in all accounts in the aws org). auditing(check and manage sgs rules in all accounts in the aws org). usage audit(monitor unused and redundant sgs and optionally perform cleanup)
+     - network firewall(all kinds of traffic, layer3): centrally manage network firewall in all accounts in aws org. `distributed`(create and manage firewall endpoint in each vpc), `centralized`(create and manage firewall endpoint in a centralized vpc), `import existing firewalls`(using `Resource sets`)
+     - route53 resolver dns firewall: manage associations between resolver dns firewall rule groups and vpcs in all accounts in aws org
  - Amazon guardduty
    - overview: threats discovery service using ML(30 days trial). input data: vpc flow logs, dns logs, cloudtrail events logs. can setup eventbridge to get notified. can protect against `cryptoCurrency` attacks (has a dedicated finding for it)
-   - advanced: 
-   - cloudformation integration
+   - advanced:
+     - multi-account strategy: admin account send invitation through guardduty to member accounts. and admin account can add/remove member account, manage guardduty within the associated member accounts, manage findings, suppression rules, trusted ip lists, threat lists. also you can specify a member account as a delegated admin for guardduty.
+     - findings automated response: potential security issues in the aws account, any findings will be sent to eventbridge as events, from which we can send to sqs, sns, lambda. events are published to the admin account and the member account that its orginated from
+     - findings: guardduty pulls independent streams of data from cloudtrail logs, vpc flow logs, dns logs or eks logs. each finding has a severity value (0.1 -- 8+)(high, medium, low). can generate sample findings in guardduty to test your automations. naming convention: threatPurpose, resourceTypeAffected, threatFamilyName, detectionMechanism(TCP,udp),Artifact
+     - findings types: ec2 finding types, iam finding types, kubernetes audit logs finding types, malware protection finding types, rds protection finding types, s3 finding types
+     - architectures
+     - trusted and threat ip lists: only for public ip address, only guardduty admin account can manage those lists(trusted IP lists and threat IP lists)
+   - cloudformation integration: can enable guardduty using cloudformation template. but it will fail if guardduty already enabled. to solve it, use cloudformation custom resource(lambda) to conditionally enable guardduty if it is not enabled, and we can deploy this stack set to all organization.
  - amazon detective: analyze and investigate and identify the root cause of security issues or suspicious activities using ML and graphs. automatically collects and process events from vpc flow logs, cloudtrail, and guardDuty and create a unified view. produce visualizations with details and context to get to the root cause.
  - amazon inspector
    - overview: security accessments. for ec2 instance, using ssm agent to analyze network accessibility, os known vulnerabilities. for container images push to aws ecr, scan images, for lambda function, scan software vulnerabilities, code, packages. then send reports to aws security hub and send findings to eventbridge. a risk score is associated with all vulnerabilities for priorirization. continuous scanning infra only when needed.
