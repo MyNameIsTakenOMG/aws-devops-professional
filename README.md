@@ -7,6 +7,7 @@
  - [Incident and Event Response](#incident-and-event-response)
  - [Security and Compliance](#security-and-compliance)
  - [Other Services](#other-services)
+ - [Filling the gap](#filling-the-gap)
 
 ## SDLC Automation
  - CI/CD: having our code in a repo and deploy it onto AWS `automatically, the right way, making sure it's tested before being deployed, with possibility to go into different stages(dev, test, staging, prod), with manual approval where needed`.
@@ -482,4 +483,82 @@
      - `glue elastic views`: combine and replicate data across multiple data stores using SQL, no custom code, glue monitor for changes in the source data
      - `glue databrew`: clean and normalize data using pre-built transformation
      - `glue studio`: new gui to create, run and monitor etl jobs in glue
-     - `glue streaming etl`(built on apache spark structured streaming): compatible with kinesis data streaming, kafka, MSK(aws managed kafka) 
+     - `glue streaming etl`(built on apache spark structured streaming): compatible with kinesis data streaming, kafka, MSK(aws managed kafka)
+
+## Filling the gap
+ - udemy assessment:
+   - for aws cloudtrail, it can monitor api activity and generate alerts based on suspicious or unauthorized activity. But it may not provide sufficient visibility into the application and infrastructure performance.
+   - While X-Ray can be used to troubleshoot distributed application, it may not provide sufficient visibility into the infrastructure and can be limited to specific application types. It must be paired with CloudWatch to provide visibility into the application and infrastructure, and enable timely detection and resolution of potential issues.
+   - While CPU utilization monitoring can provide insights into the health of instances, it does not actively perform health checks or ensure high availability and fault tolerance.
+   - aws elasticache cluster serves as a data cache layer, not a data layer.
+   - Set up an Amazon EventBridge rule to trigger a series of AWS Lambda functions orchestrated by AWS Step Functions, which is a highly efficient and scalable approach to handle high-volume event streams. because step function is automatic scaling.
+   - Using AWS Systems Manager Automation documents enables the automation of remediation actions based on the noncompliant resource findings from AWS Config rules.
+   - Set up IAM Identity Providers to establish trust relationships with external identity providers, which enables users to log in using their existing credentials, facilitating centralized access control across multiple AWS accounts and external applications.
+   - Configure Amazon Kinesis Data Streams to capture and process incoming events, with AWS Lambda processing functions consuming the events for distributed event-driven processing. This approach provides scalability, fault tolerance, and efficient distribution of events to multiple downstream services. Amazon Kinesis Data Streams is purpose-built for handling high volumes of streaming data and enables real-time processing and analysis.
+   - User data scripts provide a way to automate the configuration process during instance initialization. This allows for consistent installation and configuration of agents as instances are launched.
+   - AWS Systems Manager Distributor enables controlled deployment of software packages, including agents, across multiple instances, allowing for efficient installation and configuration.
+   - Use AWS OpsWorks to automatically install and configure agents on the EC2 instances based on a predefined configuration. This allows for centralized management and automation of the agent installation process.
+   - API Gateway is a good option to create API's for event triggers, Lambda is used for processing as it takes care of infrastructure management, and Fargate ia best suited for container orchestration.
+   - when it comes to fail to deploy lambda function due to a permission error, we can check cloudwatch logs for the lambda as well as iam role for the lambda function. but please note that the lambda function resource policies is for accessibility not for deployment purpose.
+   - Cookbooks can modify the configuration and the state of any system configured as a node on Chef infrastructure and so can be used to automate the configuration and deployment of applications and software on servers. It is primarily used for configuration management. CodePipeline is a continuous delivery service that can be used to model, visualize, and automate deployment and so can be used to automate the build, test, and deployment of code changes.
+   - Systems Manager's State Manager allows you to define and automate the configuration of your EC2 instances, ensuring that they are all configured according to your organization's security standards. **note**: AWS Config provides a detailed inventory of your AWS resources and can track configuration changes over time. However, it does not provide direct support for configuring instances to meet compliance requirements.
+   - Use AWS CloudTrail logs for comprehensive visibility of your AWS environment activities. Implement Amazon GuardDuty for continuous threat detection and use AWS Lambda functions to trigger real-time responses to identified threats.
+   - Use CloudWatch Logs for centralized log collection and set up alarms on custom metrics, along with AWS X-Ray for analyzing application traces for deeper insights
+   - Use a combination of latency, request count, and CPU utilization metrics for dynamic scaling, which provides an accurate representation of the application's performance, enabling dynamic scaling based on traffic patterns. This approach can efficiently handle traffic spikes and ensure consistent application performance.
+   - To deploy an application using the AWS Elastic Beanstalk environment, the application code should be uploaded first and the configuration options specified. Create an Elastic Beanstalk environment, upload the application code, and then specify the configuration options
+   - The design phase typically involves the creation of user stories, wireframes, and high-level architecture designs. During this phase, the requirements gathered during the analysis phase are used to create the design of the application.
+   - 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
