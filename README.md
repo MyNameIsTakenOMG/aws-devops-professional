@@ -666,6 +666,8 @@
      - Amazon ECS blue/green deployments are supported using both CodeDeploy and AWS CloudFormation. For blue/green deployments through AWS CloudFormation, you don't create a CodeDeploy application or deployment group.
      - Your deployable content and the AppSpec file are combined into an archive file (also known as application revision) and then upload it to an Amazon S3 bucket or a GitHub repository. Remember these two locations. AWS Lambda revisions can be stored in Amazon S3 buckets. EC2/On-Premises revisions are stored in Amazon S3 buckets or GitHub repositories.
      - AWS Lambda and Amazon ECS deployments CANNOT use an in-place deployment type.
+     - **note**: An in-place deployment allows you to deploy your application without creating new infrastructure; however, the availability of your application can be affected during these deployments. This approach also minimizes infrastructure costs and management overhead associated with creating new resources.
+     - **note**: A blue/green deployment is a deployment strategy in which you create two separate, but identical environments. One environment (blue) is running the current application version and one environment (green) is running the new application version. Using a blue/green deployment strategy increases application availability and reduces deployment risk by simplifying the rollback process if a deployment fails. Once testing has been completed on the green environment, live application traffic is directed to the green environment and the blue environment is deprecated.
 
 
 
