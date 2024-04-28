@@ -813,6 +813,12 @@
 
 
 - ### practice exam #1 -- 4th try
+  - AWS does not support cross-region, or cross AZ connectivity between EFS and Lambda.
+  - Create an AWS KMS key to use with CodePipeline in the development account. Also, the input bucket from the development account must have versioning activated to work with CodePipeline. Configure a cross-account role in the production account. Attach a policy to your CodePipeline service role in the development account that allows it to assume the cross-account role that you created.
+  - Create a CloudWatch Logs subscription to deliver the login event data of Amazon EC2 instances to an AWS Lambda function. Configure the Lambda function to add a decommission tag to the EC2 instance that produced the login event. Schedule an Amazon EventBridge rule to invoke another Lambda function every hour, to terminate all EC2 instances with the decommission tag.
+  - cloudwatch alarm actions: ec2, asg, and sns. **no lambda**
+  - Amazon EC2 Auto Scaling can temporarily exceed the specified maximum capacity of a group by a 10 percent margin (or by a margin of one instance, whichever is greater) during a rebalancing activity. When an Auto Scaling group with a mixed instances policy scales in, Amazon EC2 Auto Scaling will first identify which of the two types (Spot or On-Demand) should be terminated. This can temporarily cause a misbalance between the AZs.
+  - The AutomationAssumeRole in the remediation action parameters should be assumable by SSM. The user must have pass-role permissions for that role when they create the remediation action in AWS Config. The AutomationAssumeRole in the remediation action parameters should be assumable by SSM. The user must have pass-role permissions for that role when they create the remediation action in AWS Config, and that role must have whatever permissions the SSM document requires.
   - 
 
 
